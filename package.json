@@ -2,7 +2,7 @@
   "name": "my-mobile-app",
   "version": "1.0.0",
   "scripts": {
-    "build": "mkdir -p dist && cp index.html dist/"
+    "build": "mkdir -p dist && cp index.html styles.css script.js export.js import.js pdf.js pdfModal.js dist/"
   },
   "dependencies": {
     "@capacitor/core": "^6.0.0",
