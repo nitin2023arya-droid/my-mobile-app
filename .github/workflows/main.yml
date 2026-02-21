@@ -20,11 +20,18 @@ jobs:
           npm run build
           npx cap add android
           
-          # Inject Storage Permissions into AndroidManifest.xml
-          sed -i '/<application/i \    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" android:tools:ignore="ScopedStorage" />' android/app/src/main/AndroidManifest.xml
+          # 1. Inject Storage & Query Permissions
+          sed -i '/<application/i \    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" android:tools:ignore="ScopedStorage" />\n    <queries><package android:name="com.whatsapp" /><package android:name="com.android.email" /></queries>' android/app/src/main/AndroidManifest.xml
           
-          # Add the tools namespace to the manifest tag if missing
+          # 2. Add the tools namespace
           sed -i 's/<manifest /<manifest xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android" xmlns:tools="http:\/\/schemas.android.com\/tools" /' android/app/src/main/AndroidManifest.xml
+
+          # 3. Add FileProvider (Required for Sharing PDFs)
+          sed -i '/<\/application>/i \    <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.fileprovider" android:exported="false" android:grantUriPermissions="true"><meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" /></provider>' android/app/src/main/AndroidManifest.xml
+
+          # 4. Create the file_paths.xml required by the Provider
+          mkdir -p android/app/src/main/res/xml
+          echo '<?xml version="1.0" encoding="utf-8"?><paths><external-path name="my_external_files" path="." /><cache-path name="my_cache_files" path="." /></paths>' > android/app/src/main/res/xml/file_paths.xml
 
           npx cap sync android
 
