@@ -1,45 +1,45 @@
 name: Build Android APK
-on: [push]
+
+on:
+  push:
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Source
         uses: actions/checkout@v4
 
-      - name: Setup Java & Node
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '21'
-          
-      - name: Install & Configure Capacitor
-        run: |
-          npm install
-          npm run build
-          # Check if android folder exists, if not add it
-          if [ ! -d "android" ]; then npx cap add android; fi
-          
-          # 1. Add Namespaces and Permissions (Safe Append)
-          sed -i 's/<manifest /<manifest xmlns:tools="http:\/\/schemas.android.com\/tools" /' android/app/src/main/AndroidManifest.xml
-          sed -i '/<application/i <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
-          sed -i '/<application/i <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />' android/app/src/main/AndroidManifest.xml
-          sed -i '/<application/i <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />' android/app/src/main/AndroidManifest.xml
 
-          # 2. Add FileProvider for PDF Sharing (Inside <application>)
-          # We use a unique string to ensure we don't inject twice
-          if ! grep -q "androidx.core.content.FileProvider" android/app/src/main/AndroidManifest.xml; then
-            sed -i '/<\/application>/i \    <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.fileprovider" android:exported="false" android:grantUriPermissions="true"><meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" /></provider>' android/app/src/main/AndroidManifest.xml
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Web Assets
+        run: npm run build
+
+      - name: Add Android Platform (if missing)
+        run: |
+          if [ ! -d "android" ]; then
+            npx cap add android
           fi
 
-          # 3. Create Resource Folder and file_paths.xml
-          mkdir -p android/app/src/main/res/xml
-          echo '<?xml version="1.0" encoding="utf-8"?><paths><cache-path name="my_cache_files" path="." /><external-path name="my_external_files" path="." /></paths>' > android/app/src/main/res/xml/file_paths.xml
+      - name: Sync Capacitor
+        run: npx cap sync android
 
-          npx cap sync android
-
-      - name: Build with Gradle
+      - name: Build Debug APK
         run: |
           cd android
           chmod +x gradlew
@@ -48,5 +48,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Bullion-Plus-Pro-v3.3
+          name: My-Mobile-App-Debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
