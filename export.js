@@ -1,5 +1,6 @@
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+// export.js
 import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 
 async function exportData() {
@@ -10,45 +11,48 @@ async function exportData() {
         return;
     }
 
+    const filename = 'bullion_pro_backup.json';
+
     if (Capacitor.isNativePlatform()) {
         try {
-            const fileName = `bullion_pro_backup_${Date.now()}.json`;
-
-            // Save file safely
-            await Filesystem.writeFile({
-                path: fileName,
-                data: data,
-                directory: Directory.Documents,
-                encoding: Encoding.UTF8,
-                recursive: true
-            });
-
-            const uri = await Filesystem.getUri({
-                path: fileName,
-                directory: Directory.Documents
-            });
-
-            // Optional: open share sheet
-            await Share.share({
-                title: 'Backup File',
-                url: uri.uri
-            });
-
+            await saveAndShareNative(data, filename);
+            alert('Backup saved and shared successfully!');
         } catch (error) {
             console.error('Export failed:', error);
-            alert('Export failed: ' + error.message);
+            alert('Failed to export data. Please try again.');
         }
-
     } else {
-        // Web fallback
+        // Web: trigger download via blob and anchor
         const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
+
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'bullion_pro_backup.json';
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
+
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }
 }
+
+async function saveAndShareNative(data, filename) {
+    // Write the file to the device's Documents directory
+    const result = await Filesystem.writeFile({
+        path: filename,
+        data: data,               // data is already a JSON string
+        directory: Directory.Documents,
+        encoding: 'utf8',          // explicitly set encoding for text
+    });
+
+    // Share the file using the native share sheet
+    await Share.share({
+        title: 'Export Backup',
+        text: 'Your backup file is ready',
+        url: result.uri,           // content:// URI that other apps can open
+        dialogTitle: 'Share backup file',
+    });
+}
+
+export { exportData };
