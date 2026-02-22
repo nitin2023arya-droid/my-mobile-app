@@ -1,3 +1,7 @@
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Capacitor } from '@capacitor/core';
+import { Share } from '@capacitor/share';
+
 async function exportData() {
     const data = localStorage.getItem(Storage.KEY);
 
@@ -6,26 +10,37 @@ async function exportData() {
         return;
     }
 
-    // 1. Check if we are running on a mobile device
-    if (window.Capacitor && Capacitor.isNativePlatform()) {
+    if (Capacitor.isNativePlatform()) {
         try {
-            const { Filesystem } = Capacitor.Plugins;
+            const fileName = `bullion_pro_backup_${Date.now()}.json`;
 
-            // 2. Save the file to the Documents folder
+            // Save file safely
             await Filesystem.writeFile({
-                path: 'bullion_pro_backup.json',
-                data: data, // JSON string
-                directory: 'DOCUMENTS',
-                encoding: 'utf8'
+                path: fileName,
+                data: data,
+                directory: Directory.Documents,
+                encoding: Encoding.UTF8,
+                recursive: true
             });
 
-            alert('Backup saved successfully to your Documents folder!');
+            const uri = await Filesystem.getUri({
+                path: fileName,
+                directory: Directory.Documents
+            });
+
+            // Optional: open share sheet
+            await Share.share({
+                title: 'Backup File',
+                url: uri.uri
+            });
+
         } catch (error) {
-            console.error('Export failed', error);
+            console.error('Export failed:', error);
             alert('Export failed: ' + error.message);
         }
+
     } else {
-        // 3. Fallback for Web Browser (Your original code)
+        // Web fallback
         const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
